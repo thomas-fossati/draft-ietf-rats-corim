@@ -1,20 +1,17 @@
+name: "Upload CDDL assets"
+
 on:
   push:
     tags:
-      - '*'
+      - "cddl-*"
 
 jobs:
   build:
-    name: "Upload CDDL assets"
     runs-on: ubuntu-latest
     steps:
     - name: "Checkout"
       uses: actions/checkout@v4
-
-    # See https://github.com/actions/checkout/issues/290
-    - name: "Get Tag Annotations"
-      run: git fetch -f origin ${{ github.ref }}:${{ github.ref }}
-
+    
     - name: "Setup"
       id: setup
       run: date -u "+date=%FT%T" >>"$GITHUB_OUTPUT"
@@ -31,29 +28,14 @@ jobs:
         key: i-d-${{ steps.setup.outputs.date }}
         restore-keys: i-d-
 
-    - name: "Build Drafts"
+    - name: "Build and check CDDL"
       uses: martinthomson/i-d-template@v1
       with:
         token: ${{ github.token }}
 
     - name: "Create Release"
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-
-    - name: "Upload Release Asset"
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }} #
-        asset_path: ./cddl/comid-autogen.cddl
-        asset_name: comid-autogen.cddl
-        asset_content_type: text/plain
+        files: |
+          ./cddl/*-autogen.cddl
